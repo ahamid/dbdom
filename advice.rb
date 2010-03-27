@@ -11,7 +11,6 @@ module Advice
 
     def advise(h = {}, *methods)
         methods.each do |meth|
-            puts "Advising: " + meth.to_s
             # save original method
             hook_method = RUBY_VERSION >= '1.9.0' ? :"__#{meth}__hooked__" : "__#{meth}__hooked__"
             # create the copy of the hooked method          
@@ -22,7 +21,6 @@ module Advice
             # define our new replacement method
             define_method meth do |*args|
                 if h.has_key?(:before)
-                    puts "Calling"
                     method(h[:before]).call meth, args
                 end
                 # call the original method
