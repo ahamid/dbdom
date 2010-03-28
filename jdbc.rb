@@ -26,6 +26,35 @@ module Java
             auto_close(conn, &block)
         end
 
+        def Jdbc.get_tables(conn)
+            rs = conn.getMetaData.getTables(nil, nil, nil, [ "TABLE" ].to_java(:String))
+            auto_close(rs) do |rs|
+                while rs.next do
+                    yield rs.getString("TABLE_NAME")
+                end
+            end
+        end
+
+        def Jdbc.get_rows(conn, tablename)
+            auto_close(conn.createStatement) do |stmt|
+                rs = stmt.executeQuery("select * from " + tablename)
+                auto_close(rs) do |rs|
+                    metadata = rs.getMetaData
+                    column_names = []
+                    1.upto(metadata.getColumnCount) do |i|
+                        column_names << metadata.getColumnName(i)
+                    end
+                    while rs.next do
+                        column_values = []
+                        column_names.each_with_index do |name, i|
+                            column_values << rs.getString(i + 1)
+                        end
+                        yield column_names, column_values
+                    end
+                end
+            end
+        end
+
         # TODO: determine if it's possible to just alias Module class methods        
         #alias :with_statement :auto_close
         #alias :with_resultset :auto_close

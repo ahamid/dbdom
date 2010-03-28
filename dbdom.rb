@@ -49,12 +49,9 @@ class DbElement < DynamicElement
 
     def init_children
         Java::Jdbc.with_connection(context) do |conn|
-            rs = conn.getMetaData.getTables(nil, nil, nil, [ "TABLE" ].to_java(:String))
-            @children = []
-            Java::Jdbc.auto_close(rs) do |rs|
-                while rs.next do
-                    @children << TableElement.new(rs.getString("TABLE_NAME"), nil, context);
-                end
+            @children = []            
+            Java::Jdbc.get_tables(conn) do |name|
+                @children << TableElement.new(name, nil, context);
             end
         end
     end
@@ -69,30 +66,20 @@ class TableElement < DynamicElement
 
     def init_children
         Java::Jdbc.with_connection(context) do |conn|
-            Java::Jdbc.auto_close(conn.createStatement) do |stmt|
-                rs = stmt.executeQuery("select * from " + @tablename)
-                Java::Jdbc.auto_close(rs) do |rs|
-                    metadata = rs.getMetaData
-                    column_names = []
-                    1.upto(metadata.getColumnCount) do |i|
-                        column_names << metadata.getColumnName(i)
-                    end
-                    rownum = 0
-                    while rs.next do
-                        @children << construct_row(rs, column_names, rownum)
-                        rownum += 1
-                    end
-                end
+            rownum = 0
+            Java::Jdbc.get_rows(conn, @tablename) do |column_names, column_values|
+                @children << construct_row(column_names, column_values, rownum)
+                rownum += 1
             end
         end
     end
 
-    def construct_row(rs, column_names, rownum)
+    def construct_row(column_names, column_values, rownum)
         row = Element.new("row");
         row.attributes["num"] = rownum.to_s
         column_names.each_with_index do |name, i|
             col = Element.new(name)
-            data = Text.new(rs.getString(i + 1), false)
+            data = Text.new(column_values[i], false)
             col << data
             row << col
         end

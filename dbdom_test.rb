@@ -58,10 +58,10 @@ class DbDomTest < Test::Unit::TestCase
         # Rexml does not support predicates? :(
         # http://arrogantgeek.blogspot.com/2008/01/why-ruby-sucks-1.html
         #results = XPath.match(doc, "//table[@name='BOAT'/row/NAME");
-        results = XPath.match(doc, "//table/row/NAME/child::text()");
+        results = XPath.match(doc, "//table/row/NAME/text()");
         assert_equal 3, results.size
         who = ""
-        results.each { |t| who << t.value << " "}
+        results.each { |t| who << t.value << " " }
         puts "On a boat: " + who
     end
 end
