@@ -1,4 +1,9 @@
+require 'rubygems'
+require 'xercesImpl'
 require 'java'
+
+import org.apache.xerces.dom.ElementImpl
+import org.apache.xerces.dom.CoreDocumentImpl
 
 module DbDom
     module Xerces
@@ -18,33 +23,43 @@ module DbDom
             def initialize(doc)
                 super(doc, "database")
                 needsSyncChildren(true)
+                @updating = false
             end
 
             def synchronizeChildren
-                Java::Jdbc.with_connection(getOwnerDocument.settings) do |conn|
+                return if @updating # avoid re-entrancy
+                @updating = true
+                Java::Jdbc.with_connection(ownerDocument.settings) do |conn|
                     Java::Jdbc.get_tables(conn) do |name|
-                        appendChild(TableElement.new(getOwnerDocument, name));
+                        appendChild(TableElement.new(ownerDocument, name));
                     end
                 end
                 super
+                @updating = false
             end
         end
 
         class TableElement < org.apache.xerces.dom.ElementImpl
             def initialize(doc, name)
-                super(doc, name)
+                super(doc, "table")
                 needsSyncChildren(true)
+                setAttribute("name", name)
+                @name = name
+                @updating = false
             end
 
             def synchronizeChildren
-                Java::Jdbc.with_connection(getOwnerDocument.settings) do |conn|
+                return if @updating # avoid re-entrancy
+                @updating = true
+                Java::Jdbc.with_connection(ownerDocument.settings) do |conn|
                     rownum = 0
-                    Java::Jdbc.get_rows(conn, getNodeName) do |column_names, column_values|
+                    Java::Jdbc.get_rows(conn, @name) do |column_names, column_values|
                         appendChild(construct_row(column_names, column_values, rownum))
                         rownum += 1
                     end
                 end
                 super
+                @updating = false
             end
 
             private
@@ -52,11 +67,11 @@ module DbDom
                 # don't iterate the resultset on demand or implement
                 # any optimizations based on specific Element navigation calls
                 def construct_row(column_names, column_values, rownum)
-                    row = getOwnerDocument.createElement("row");
-                    row.attributes["num"] = rownum.to_s
+                    row = ownerDocument.createElement("row");
+                    row.setAttribute("num", rownum.to_s)
                     column_names.each_with_index do |name, i|
-                        col = getOwnerDocument.createElement(getOwnerDocument, name)
-                        data = getOwnerDocument.createTextNode(column_values[i])
+                        col = ownerDocument.createElement(name)
+                        data = ownerDocument.createTextNode(column_values[i])
                         col.appendChild(data)
                         row.appendChild(col)
                     end
@@ -70,14 +85,24 @@ module DbDom
                 @settings = settings
                 super()
                 needsSyncChildren(true)
+                @docElement = DatabaseElement.new(self)
+                # we need to append the doc root
+                # (which makes sense but hadn't done it when I was just using DOM)
+                # xpath relies on this
+                appendChild(@docElement)
             end
 
             attr_reader :settings
-            
+           
+            # Note: for some reason calling this class with 'docElement'
+            # did not result in this method being invoked
+            # I moved the initialization to the constructor
+            # this method was implemented because synchronizeChildren didn't
+            # appear to be getting called in the first place 
             def getDocumentElement
             #def synchronizeChildren
             #    puts "SYNCING"
-                @docElement = DatabaseElement.new(self)
+                @docElement
             #    super
             end
         end

@@ -93,45 +93,40 @@ class XercesDbDomTest < Test::Unit::TestCase
     # http://stackoverflow.com/questions/1145318/getting-uninitialized-constant-error-when-trying-to-run-tests
     def test_create_dbdocument
         doc = @dbdom.createDoc(PROPERTIES)
-        puts doc
-        puts doc.getDocumentElement
-        puts doc.getDocumentElement.getLength  
-        #db = doc.root
-        #assert_equal 1, db.size
-        #table = db[0]
-        #assert_equal "boat", table.attributes["name"].downcase
-        #assert_equal 3, table.size
-
-        #table.children.each_with_index do |row, i|
-        #    assert_equal i.to_s, row.attributes["num"]
-        #    assert_equal 2, row.size
-        #    col = row[0]
-        #    assert_equal "id", col.name.downcase
-        #    assert_equal 1, col.size
-        #    text = col[0]
-        #    # ???: dbdom_test.rb:44 warning: (...) interpreted as grouped expression
-        #    assert_equal (i + 1).to_s, text.value
-        #    col = row[1]
-        #    assert_equal "name", col.name.downcase
-        #    assert_equal 1, col.size
-        #    text = col[0]
-        #    assert_equal ["andy", "akiva", "jorma"][i], text.value
-        #end
+        db = doc.documentElement
+        assert_equal 1, db.childNodes.length
+        table = db.childNodes.item(0)
+        assert_equal "boat", table.getAttribute("name").downcase
+        assert_equal 3, table.childNodes.length
+        table.childNodes.length.times do |i|
+            row = table.childNodes.item(i)
+            assert_equal i.to_s, row.getAttribute("num")
+            assert_equal 2, row.childNodes.length
+            col = row.childNodes.item(0)
+            assert_equal "id", col.nodeName.downcase
+            assert_equal 1, col.childNodes.length
+            text = col.childNodes.item(0)
+            # ???: dbdom_test.rb:44 warning: (...) interpreted as grouped expression
+            assert_equal (i + 1).to_s, text.nodeValue
+            col = row.childNodes.item(1)
+            assert_equal "name", col.nodeName.downcase
+            assert_equal 1, col.childNodes.length
+            text = col.childNodes.item(0)
+            assert_equal ["andy", "akiva", "jorma"][i], text.nodeValue
+        end
     end
 
     def test_xpath
         doc = @dbdom.createDoc(PROPERTIES)
-        #puts doc
-        #results = @dbdom.xpath(doc, '//database');
-        #assert_equal 1, results.size
-        ## Rexml does not support predicates? :(
-        ## http://arrogantgeek.blogspot.com/2008/01/why-ruby-sucks-1.html
-        ##results = XPath.match(doc, "//table[@name='BOAT'/row/NAME");
-        #results = @dbdom.xpath(doc, "//table/row/NAME/text()");
-        #assert_equal 3, results.size
-        #who = ""
-        #results.each { |t| who << t.value << " " }
-        #puts "On a boat: " + who
+        results = @dbdom.xpath(doc, '//database');
+        assert_equal 1, results.length
+        results = @dbdom.xpath(doc, "//table[@name='BOAT']/row/NAME/text()");
+        assert_equal 3, results.length
+        who = ""
+        results.length.times do |i|
+            who << results.item(i).nodeValue << " "
+        end
+        puts "On a boat: " + who
     end
 end
 
