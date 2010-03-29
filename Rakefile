@@ -11,7 +11,12 @@ begin
     gemspec.homepage = "http://github.com/ahamid/dbdom"  
     gemspec.authors = ["Aaron Hamid"]  
     gemspec.has_rdoc = false # not yet
-#    gemspec.files.exclude 'test.sh'
+    # gemspec.files.exclude 'test.sh'
+
+    # I think this is redundant because jeweler requires rubygems already
+    # gemspec.add_dependency('rubygems')
+
+    gemspec.add_dependency('maven_gem')  
   end  
   Jeweler::GemcutterTasks.new
 rescue LoadError  
