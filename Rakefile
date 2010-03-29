@@ -11,7 +11,7 @@ begin
     gemspec.homepage = "http://github.com/ahamid/dbdom"  
     gemspec.authors = ["Aaron Hamid"]  
     gemspec.has_rdoc = false # not yet
-    gemspec.files.exclude 'test.sh'
+#    gemspec.files.exclude 'test.sh'
   end  
   Jeweler::GemcutterTasks.new
 rescue LoadError  
