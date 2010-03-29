@@ -11,6 +11,7 @@ begin
     gemspec.homepage = "http://github.com/ahamid/dbdom"  
     gemspec.authors = ["Aaron Hamid"]  
     gemspec.has_rdoc = false # not yet
+    gemspec.files.exclude '.gitignore'
     # gemspec.files.exclude 'test.sh'
 
     # I think this is redundant because jeweler requires rubygems already
