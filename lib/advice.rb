@@ -32,4 +32,28 @@ module Advice
             end
         end
     end
+
+    # this only works with methods that do no return a value
+    # because they need to be short-circuited
+    def short_circuit_recursion(method)
+        hook_method = RUBY_VERSION >= '1.9.0' ? :"__#{meth}__recursable__" : "__#{meth}__recursable__"
+        # create the copy of the hooked method          
+        alias_method hook_method, meth
+        # declare the original private
+        private hook_method
+
+        # define our new replacement method that checks if it has been
+        # entered first
+        define_method meth do |*args|
+            # short-circuit the call if it is an ancestor on the call stack!
+            return if (instance_variable_get("@#{method}_entered") == true)
+            instance_variable_set("@#{method}_entered", true)
+
+            # call the original method
+            send(:"__#{meth}__recursable__", *args)
+
+            instance_variable_set("@#{method}_entered", false)
+        end    
+    end
+
 end

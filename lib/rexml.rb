@@ -55,23 +55,23 @@ module DbDom
         end
 
         class DbElement < DynamicElement
-            def initialize(parent, context)
-                super("database", parent, context)
+            def initialize(context)
+                super("database", nil, context)
             end
 
             def init_children
                 Util::Jdbc.with_connection(context) do |conn|
                     @children = []            
                     Util::Jdbc.get_tables(conn) do |name|
-                        @children << TableElement.new(name, nil, context);
+                        @children << TableElement.new(name, context);
                     end
                 end
             end
         end
 
         class TableElement < DynamicElement
-            def initialize(tablename, parent, context)
-                super("table", parent, context)
+            def initialize(tablename, context)
+                super("table", nil, context)
                 @tablename = tablename;
                 attributes["name"] = tablename;
             end
@@ -79,30 +79,37 @@ module DbDom
             def init_children
                 Util::Jdbc.with_connection(context) do |conn|
                     rownum = 0
-                    Util::Jdbc.get_rows(conn, @tablename) do |column_names, column_values|
-                        @children << construct_row(column_names, column_values, rownum)
+                    Util::Jdbc.get_rows(conn, @tablename) do |row|
+                        @children << RowElement.new(rownum, row, context)
                         rownum += 1
                     end
                 end
             end
+        end
 
-            def construct_row(column_names, column_values, rownum)
-                row = Element.new("row");
-                row.attributes["num"] = rownum.to_s
-                column_names.each_with_index do |name, i|
+        class RowElement < DynamicElement
+            def initialize(rownum, row, context)
+                super("row", nil, context)
+                @row = row
+                attributes["num"] = rownum.to_s;
+            end
+
+            def init_children
+                column_values = @row.column_values
+                @row.column_names.each_with_index do |name, i|
                     col = Element.new(name)
                     data = Text.new(column_values[i], false)
                     col << data
-                    row << col
+                    self << col
                 end
-                return row
             end
+
         end
 
         class DbDocument < Document
             def initialize(source = nil, context = {})
                 super(source, context)
-                @children << DbElement.new(nil, context)
+                @children << DbElement.new(context)
             end
         end
     end

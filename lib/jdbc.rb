@@ -2,6 +2,11 @@ require 'java'
 
 module Util
     module Jdbc
+
+        def Jdbc.dangerous_identifier?(name)
+            return name =~ /\$/
+        end
+
         # this is apparently not necessary in Java 1.6+
         # it implements some sort of automatic driver loading
         def Jdbc.load_driver(driver_class)
@@ -32,27 +37,17 @@ module Util
             rs = conn.getMetaData.getTables(nil, nil, nil, [ "TABLE" ].to_java(:String))
             auto_close(rs) do |rs|
                 while rs.next do
-                    yield rs.getString("TABLE_NAME")
+                    name = rs.getString("TABLE_NAME")
+                    next if dangerous_identifier? name
+                    yield name
                 end
             end
         end
 
         def Jdbc.get_rows(conn, tablename)
-            auto_close(conn.createStatement) do |stmt|
-                rs = stmt.executeQuery("select * from " + tablename)
-                auto_close(rs) do |rs|
-                    metadata = rs.getMetaData
-                    column_names = []
-                    1.upto(metadata.getColumnCount) do |i|
-                        column_names << metadata.getColumnName(i)
-                    end
-                    while rs.next do
-                        column_values = []
-                        column_names.each_with_index do |name, i|
-                            column_values << rs.getString(i + 1)
-                        end
-                        yield column_names, column_values
-                    end
+            auto_close(conn.createStatement(java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY)) do |stmt|
+                get_row_data(tablename, stmt) do |row|
+                    yield row
                 end
             end
         end
@@ -65,6 +60,44 @@ module Util
         end
         def Jdbc.with_resultset(object, &block)
             auto_close(object, &block)
+        end
+
+        # this implementation just grabs all rows
+        # don't iterate the resultset on demand or implement
+        # any optimizations based on specific Element navigation calls
+        def Jdbc.get_row_data(tablename, stmt)
+            puts "Selecting * from table '#{tablename}'"
+            rs = stmt.executeQuery("select * from " + tablename)
+            auto_close(rs) do |rs|
+                metadata = rs.getMetaData
+                column_names = []
+                1.upto(metadata.getColumnCount) do |i|
+                    column_names << metadata.getColumnName(i)
+                end
+                while rs.next do
+                    r = ResultSetRow.new(rs, column_names)
+                    yield r
+                end
+            end
+        end
+
+        # abstracts the notion of a row of data in a table
+        class ResultSetRow
+            def initialize(rs, column_names)
+                @column_names = column_names
+                @column_values = []
+                @column_names.each_with_index do |name, i|
+                    @column_values << rs.getString(i + 1)
+                end
+            end
+
+            def column_names
+                @column_names
+            end
+
+            def column_values
+                @column_values
+            end      
         end
     end
 end

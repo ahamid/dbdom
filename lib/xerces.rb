@@ -53,33 +53,42 @@ module DbDom
 
             def synchronizeChildren
                 return if @updating # avoid re-entrancy
+                puts "Getting all rows for table: " + getAttribute("name")
                 @updating = true
                 Util::Jdbc.with_connection(ownerDocument.settings) do |conn|
                     rownum = 0
-                    Util::Jdbc.get_rows(conn, @name) do |column_names, column_values|
-                        appendChild(construct_row(column_names, column_values, rownum))
+                    Util::Jdbc.get_rows(conn, @name) do |row|
+                        appendChild(RowElement.new(ownerDocument, rownum, row))
                         rownum += 1
                     end
                 end
                 super
                 @updating = false
             end
+        end
 
-            private
-                # this implementation just grabs all rows
-                # don't iterate the resultset on demand or implement
-                # any optimizations based on specific Element navigation calls
-                def construct_row(column_names, column_values, rownum)
-                    row = ownerDocument.createElement("row");
-                    row.setAttribute("num", rownum.to_s)
-                    column_names.each_with_index do |name, i|
-                        col = ownerDocument.createElement(name)
-                        data = ownerDocument.createTextNode(column_values[i])
-                        col.appendChild(data)
-                        row.appendChild(col)
-                    end
-                    return row
-                end
+        class RowElement < org.apache.xerces.dom.ElementImpl
+            def initialize(doc, rownum, row)
+                super(doc, "row")
+                setAttribute("num", rownum.to_s)  
+                @row = row    
+                @updating = false
+                needsSyncChildren(true)
+            end
+
+            def synchronizeChildren
+                return if @updating # avoid recursion
+                @updating = true
+                column_values = @row.column_values
+                @row.column_names.each_with_index do |name, i|
+                    col = ownerDocument.createElement(name)
+                    val = ownerDocument.createTextNode(column_values[i])
+                    col.appendChild(val)
+                    appendChild(col)
+                end            
+                super
+                @updating = false
+            end
         end
 
         class DatabaseDocument < org.apache.xerces.dom.CoreDocumentImpl
