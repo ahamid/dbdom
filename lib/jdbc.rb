@@ -1,11 +1,13 @@
 require 'java'
 
-module Java
+module Util
     module Jdbc
         # this is apparently not necessary in Java 1.6+
         # it implements some sort of automatic driver loading
         def Jdbc.load_driver(driver_class)
-            Java::JavaClass.for_name(driver_class)
+            puts "Loading driver: " + driver_class
+            java.lang.Class.for_name(driver_class)
+            #Java::JavaClass.for_name(driver_class)
         end
 
         def Jdbc.get_connection(url, user, password)
