@@ -21,40 +21,37 @@ module DbDom
         end
 
         class DatabaseElement < org.apache.xerces.dom.ElementImpl
+            include Advice
+
             def initialize(doc)
                 super(doc, "database")
                 needsSyncChildren(true)
-                @updating = false
             end
 
             def synchronizeChildren
-                return if @updating # avoid re-entrancy
-                @updating = true
-
                 Util::Jdbc.with_connection(getOwnerDocument.settings) do |conn|
                     Util::Jdbc.get_tables(conn) do |name|
                         appendChild(TableElement.new(ownerDocument, name));
                     end
                 end
-
                 super
-                @updating = false
             end
+
+            short_circuit_recursion :synchronizeChildren
         end
 
         class TableElement < org.apache.xerces.dom.ElementImpl
+            include Advice
+
             def initialize(doc, name)
                 super(doc, "table")
                 needsSyncChildren(true)
                 setAttribute("name", name)
                 @name = name
-                @updating = false
             end
 
             def synchronizeChildren
-                return if @updating # avoid re-entrancy
                 puts "Getting all rows for table: " + getAttribute("name")
-                @updating = true
                 Util::Jdbc.with_connection(ownerDocument.settings) do |conn|
                     rownum = 0
                     Util::Jdbc.get_rows(conn, @name) do |row|
@@ -63,22 +60,22 @@ module DbDom
                     end
                 end
                 super
-                @updating = false
             end
+
+            short_circuit_recursion :synchronizeChildren
         end
 
         class RowElement < org.apache.xerces.dom.ElementImpl
+            include Advice
+
             def initialize(doc, rownum, row)
                 super(doc, "row")
                 setAttribute("num", rownum.to_s)  
                 @row = row    
-                @updating = false
                 needsSyncChildren(true)
             end
 
             def synchronizeChildren
-                return if @updating # avoid recursion
-                @updating = true
                 column_values = @row.column_values
                 @row.column_names.each_with_index do |name, i|
                     col = ownerDocument.createElement(name)
@@ -87,8 +84,9 @@ module DbDom
                     appendChild(col)
                 end            
                 super
-                @updating = false
             end
+
+            short_circuit_recursion :synchronizeChildren
         end
 
         class DatabaseDocument < org.apache.xerces.dom.CoreDocumentImpl

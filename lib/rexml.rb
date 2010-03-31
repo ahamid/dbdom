@@ -18,7 +18,7 @@ module DbDom
         end
 
         class DynamicElement < Element
-            extend Advice
+            include Advice
 
             # this is super-lame
             # i can't find a way to intercept instance var access

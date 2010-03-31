@@ -16,7 +16,7 @@ end
 class SubClass < BadClass
     attr_reader :before_called, :after_called, :internal_field
 
-    extend Advice
+    include Advice
 
     advise({ :before => :before_advice, :after => :after_advice }, :get_the_internal_field)
 
