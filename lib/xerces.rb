@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'xercesImpl'
 require 'java'
+require 'jdbc'
 
 import org.apache.xerces.dom.ElementImpl
 import org.apache.xerces.dom.CoreDocumentImpl
@@ -29,11 +30,13 @@ module DbDom
             def synchronizeChildren
                 return if @updating # avoid re-entrancy
                 @updating = true
-                Java::Jdbc.with_connection(ownerDocument.settings) do |conn|
-                    Java::Jdbc.get_tables(conn) do |name|
+
+                Util::Jdbc.with_connection(getOwnerDocument.settings) do |conn|
+                    Util::Jdbc.get_tables(conn) do |name|
                         appendChild(TableElement.new(ownerDocument, name));
                     end
                 end
+
                 super
                 @updating = false
             end
@@ -51,9 +54,9 @@ module DbDom
             def synchronizeChildren
                 return if @updating # avoid re-entrancy
                 @updating = true
-                Java::Jdbc.with_connection(ownerDocument.settings) do |conn|
+                Util::Jdbc.with_connection(ownerDocument.settings) do |conn|
                     rownum = 0
-                    Java::Jdbc.get_rows(conn, @name) do |column_names, column_values|
+                    Util::Jdbc.get_rows(conn, @name) do |column_names, column_values|
                         appendChild(construct_row(column_names, column_values, rownum))
                         rownum += 1
                     end

@@ -60,9 +60,9 @@ module DbDom
             end
 
             def init_children
-                Java::Jdbc.with_connection(context) do |conn|
+                Util::Jdbc.with_connection(context) do |conn|
                     @children = []            
-                    Java::Jdbc.get_tables(conn) do |name|
+                    Util::Jdbc.get_tables(conn) do |name|
                         @children << TableElement.new(name, nil, context);
                     end
                 end
@@ -77,9 +77,9 @@ module DbDom
             end
 
             def init_children
-                Java::Jdbc.with_connection(context) do |conn|
+                Util::Jdbc.with_connection(context) do |conn|
                     rownum = 0
-                    Java::Jdbc.get_rows(conn, @tablename) do |column_names, column_values|
+                    Util::Jdbc.get_rows(conn, @tablename) do |column_names, column_values|
                         @children << construct_row(column_names, column_values, rownum)
                         rownum += 1
                     end
