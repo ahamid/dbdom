@@ -1,11 +1,15 @@
 require 'test/unit'
+require 'jdbc'
 require 'rexml'
 require 'xerces'
 
+
+#Util::Jdbc.load_driver('org.apache.derby.jdbc.EmbeddedDriver')
+
 PROPERTIES = { :url => 'jdbc:derby:memory:TestDb;create=true' }
 
-Java::Jdbc.with_connection(PROPERTIES) do |conn|
-    Java::Jdbc.auto_close(conn.createStatement) do |stmt|
+Util::Jdbc.with_connection(PROPERTIES) do |conn|
+    Util::Jdbc.auto_close(conn.createStatement) do |stmt|
         stmt.execute("create table Boat(id integer, name varchar(20))")
         stmt.execute("insert into Boat (id, name) values (1, 'andy')")
         stmt.execute("insert into Boat (id, name) values (2, 'akiva')")
@@ -15,9 +19,9 @@ end
 
 class JdbcTest < Test::Unit::TestCase
     def test_jdbc
-        Java::Jdbc.with_connection(PROPERTIES) do |conn|
+        Util::Jdbc.with_connection(PROPERTIES) do |conn|
             rs = conn.getMetaData.getTables(nil, nil, nil, [ "TABLE" ].to_java(:String))
-            Java::Jdbc.auto_close(rs) do |rs|
+            Util::Jdbc.auto_close(rs) do |rs|
                 assert rs.next
                 assert_equal "boat", rs.getString("TABLE_NAME").downcase
             end
